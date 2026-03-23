@@ -1,0 +1,13 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+motor==3.4.0
+pymongo==4.7.2
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-dotenv==1.0.1
+groq==1.0.0
+sentence-transformers==2.7.0
+numpy==1.26.4
+python-multipart==0.0.9
+aiosmtplib==3.0.1

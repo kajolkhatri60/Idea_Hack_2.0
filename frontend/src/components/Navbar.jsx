@@ -1,0 +1,104 @@
+import { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { ShieldAlert, Menu, X, ChevronRight } from 'lucide-react'
+
+export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false)
+  const [open, setOpen] = useState(false)
+  const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', fn)
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  const links = [
+    { to: '/', label: 'Home' },
+    { to: '/contact', label: 'Contact' },
+  ]
+
+  return (
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled ? 'bg-[#080b14]/90 backdrop-blur-xl border-b border-slate-800/60' : 'bg-transparent'
+    }`}>
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center group-hover:bg-violet-600/30 transition-colors">
+            <ShieldAlert size={16} className="text-violet-400" />
+          </div>
+          <span className="font-semibold text-sm tracking-tight text-slate-100">SmartResolve <span className="text-violet-400">AI</span></span>
+        </Link>
+
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          {links.map(l => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                location.pathname === l.to
+                  ? 'text-slate-100 bg-slate-800/60'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+              }`}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* CTA */}
+        <div className="hidden md:flex items-center gap-3">
+          {user ? (
+            <button
+              onClick={() => navigate('/app')}
+              className="flex items-center gap-1.5 text-sm bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Dashboard <ChevronRight size={14} />
+            </button>
+          ) : (
+            <>
+              <Link to="/login" className="text-sm text-slate-400 hover:text-slate-100 px-4 py-2 rounded-lg transition-colors">
+                Sign in
+              </Link>
+              <Link to="/register" className="text-sm bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors">
+                Get started
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Mobile toggle */}
+        <button onClick={() => setOpen(!open)} className="md:hidden text-slate-400 hover:text-slate-100">
+          {open ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {open && (
+        <div className="md:hidden bg-[#0d1117]/95 backdrop-blur-xl border-b border-slate-800 px-6 py-4 space-y-1">
+          {links.map(l => (
+            <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
+              className="block px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors">
+              {l.label}
+            </Link>
+          ))}
+          <div className="pt-3 border-t border-slate-800 flex flex-col gap-2">
+            {user ? (
+              <Link to="/app" onClick={() => setOpen(false)} className="btn-primary text-center">Dashboard</Link>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setOpen(false)} className="btn-ghost text-center">Sign in</Link>
+                <Link to="/register" onClick={() => setOpen(false)} className="btn-primary text-center">Get started</Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  )
+}
