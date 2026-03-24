@@ -12,9 +12,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SmartResolve AI", lifespan=lifespan)
 
+import os
+
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    os.getenv("FRONTEND_URL", ""),   # set this in Render env vars
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[o for o in ALLOWED_ORIGINS if o],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
