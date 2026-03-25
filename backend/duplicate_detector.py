@@ -35,5 +35,8 @@ try:
 
 except ImportError:
     # sentence-transformers not available — duplicate detection disabled
+    def embed(text: str) -> list:
+        return []
+
     async def find_duplicates(db, text: str, threshold: float = 0.85, exclude_id=None) -> list:
         return []
