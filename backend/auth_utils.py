@@ -7,6 +7,8 @@ from database import get_db
 from bson import ObjectId
 import os
 
+import warnings
+warnings.filterwarnings("ignore", ".*error reading bcrypt version.*")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer()
 
