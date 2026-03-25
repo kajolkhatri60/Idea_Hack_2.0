@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../context/NotificationContext'
@@ -9,12 +9,280 @@ import toast from 'react-hot-toast'
 import ChatBox from '../components/ChatBox'
 import {
   ArrowLeft, Sparkles, Loader2, Copy, MessageSquare,
-  Mail, Phone, Globe, GitBranch, Clock, User
+  Mail, Phone, Globe, GitBranch, Clock, User, Send,
+  CheckCircle2, PlayCircle, XCircle, AlertTriangle,
+  ChevronRight, FileText, Zap
 } from 'lucide-react'
 
-const STATUS_OPTIONS = ['open', 'in-progress', 'resolved']
+// ── Status Workflow Panel ─────────────────────────────────────────────────────
+function StatusWorkflowPanel({ status, onUpdate, updating, complaint }) {
+  const [showModal, setShowModal] = useState(false)
+  const [targetStatus, setTargetStatus] = useState(null)
+  const [note, setNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const TRANSITIONS = {
+    open: {
+      next: 'in-progress',
+      label: 'Start Review',
+      icon: PlayCircle,
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-400/10',
+      border: 'border-yellow-400/20',
+      btnClass: 'bg-yellow-500 hover:bg-yellow-600',
+      description: 'Mark this complaint as under review. The customer will be notified by email that their complaint is being processed.',
+      emailPreview: '📧 Email to customer: "Your complaint is now under review by our team."',
+    },
+    'in-progress': {
+      next: 'resolved',
+      label: 'Mark Resolved',
+      icon: CheckCircle2,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-400/10',
+      border: 'border-emerald-400/20',
+      btnClass: 'bg-emerald-500 hover:bg-emerald-600',
+      description: 'Mark this complaint as resolved. The customer will receive a resolution confirmation email.',
+      emailPreview: '📧 Email to customer: "Your complaint has been resolved. Thank you for your patience."',
+    },
+  }
+
+  const STATUS_META = {
+    open:          { label: 'Open',        color: 'text-blue-400',    bg: 'bg-blue-400/10',    border: 'border-blue-400/20',    icon: AlertTriangle },
+    'in-progress': { label: 'In Review',   color: 'text-yellow-400',  bg: 'bg-yellow-400/10',  border: 'border-yellow-400/20',  icon: PlayCircle    },
+    resolved:      { label: 'Resolved',    color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20', icon: CheckCircle2  },
+  }
+
+  const current = STATUS_META[status] || STATUS_META.open
+  const transition = TRANSITIONS[status]
+  const CurrentIcon = current.icon
+
+  const handleAction = async () => {
+    setSubmitting(true)
+    try {
+      await onUpdate(targetStatus, note)
+      setShowModal(false)
+      setNote('')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="card p-5">
+        {/* Current status */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Current Status</span>
+          <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${current.bg} ${current.color} border ${current.border}`}>
+            <CurrentIcon size={11} />
+            {current.label}
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div className="flex items-center gap-1.5 mb-5">
+          {['open', 'in-progress', 'resolved'].map((s, i) => {
+            const steps = ['open', 'in-progress', 'resolved']
+            const currentIdx = steps.indexOf(status)
+            const isActive = i <= currentIdx
+            return (
+              <div key={s} className="flex items-center gap-1.5 flex-1">
+                <div className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${isActive ? 'bg-violet-500' : ''}`}
+                  style={!isActive ? { background: 'var(--bg-elevated)' } : {}} />
+                {i < 2 && <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-violet-500' : ''}`}
+                  style={!isActive ? { background: 'var(--bg-elevated)' } : {}} />}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Next action button */}
+        {transition ? (
+          <button
+            onClick={() => { setTargetStatus(transition.next); setShowModal(true) }}
+            disabled={updating}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-white text-sm font-medium transition-all ${transition.btnClass}`}
+          >
+            <div className="flex items-center gap-2">
+              <transition.icon size={15} />
+              {transition.label}
+            </div>
+            <ChevronRight size={14} />
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-400/10 border border-emerald-400/20">
+            <CheckCircle2 size={15} className="text-emerald-400" />
+            <span className="text-sm text-emerald-400 font-medium">Complaint Resolved</span>
+          </div>
+        )}
+
+        {/* Reopen option for resolved */}
+        {status === 'resolved' && (
+          <button onClick={() => { setTargetStatus('open'); setShowModal(true) }}
+            className="w-full mt-2 text-xs py-2 rounded-xl transition-colors hover:bg-slate-800/30"
+            style={{ color: 'var(--text-muted)' }}>
+            Reopen complaint
+          </button>
+        )}
+      </div>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93 }}
+              className="w-full max-w-md rounded-2xl p-6 shadow-2xl"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+            >
+              {/* Icon */}
+              {targetStatus && (() => {
+                const t = TRANSITIONS[status]
+                const Icon = t?.icon || CheckCircle2
+                return (
+                  <div className={`w-12 h-12 rounded-2xl ${t?.bg || 'bg-violet-400/10'} border ${t?.border || 'border-violet-400/20'} flex items-center justify-center mx-auto mb-4`}>
+                    <Icon size={22} className={t?.color || 'text-violet-400'} />
+                  </div>
+                )
+              })()}
+
+              <h2 className="text-base font-semibold text-center mb-1" style={{ color: 'var(--text-primary)' }}>
+                {targetStatus === 'in-progress' ? 'Start Review?' : targetStatus === 'resolved' ? 'Mark as Resolved?' : 'Reopen Complaint?'}
+              </h2>
+              <p className="text-xs text-center mb-5" style={{ color: 'var(--text-muted)' }}>
+                {TRANSITIONS[status]?.description || 'This will update the complaint status.'}
+              </p>
+
+              {/* Email preview */}
+              {TRANSITIONS[status]?.emailPreview && (
+                <div className="rounded-xl px-4 py-3 mb-4 text-xs" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  {TRANSITIONS[status].emailPreview}
+                </div>
+              )}
+
+              {/* Note field */}
+              <div className="mb-5">
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--text-muted)' }}>
+                  Add a note <span className="opacity-50">(optional — for internal audit trail)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  placeholder="e.g. Verified transaction, refund initiated..."
+                  className="input-field resize-none text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={handleAction} disabled={submitting}
+                  className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  {submitting
+                    ? <><Loader2 size={14} className="animate-spin" /> Updating...</>
+                    : <><Zap size={14} /> Confirm</>
+                  }
+                </button>
+                <button onClick={() => { setShowModal(false); setNote('') }}
+                  className="btn-ghost px-5">
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
 
 const channelIcons = { whatsapp: MessageSquare, email: Mail, phone: Phone, web: Globe, chat: MessageSquare }
+function EmailReplyBox({ complaintId, complaint }) {
+  const [reply, setReply] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [generating, setGenerating] = useState(false)
+
+  const generateDraft = async () => {
+    setGenerating(true)
+    try {
+      const { data } = await api.post(`/complaints/${complaintId}/suggest-reply`)
+      setReply(data.suggestion)
+    } catch { toast.error('Failed to generate draft') }
+    finally { setGenerating(false) }
+  }
+
+  const sendReply = async () => {
+    if (!reply.trim()) return toast.error('Reply cannot be empty')
+    setSending(true)
+    try {
+      await api.post(`/complaints/${complaintId}/email-reply`, { reply })
+      setSent(true)
+      toast.success('Email reply sent to customer')
+      setTimeout(() => setSent(false), 4000)
+      setReply('')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send')
+    } finally { setSending(false) }
+  }
+
+  const emailMessages = (complaint.messages || []).filter(m => m.msg_type === 'email' || m.sender_role === 'agent')
+
+  return (
+    <div className="card p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Mail size={15} className="text-blue-400" />
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Email Reply</span>
+        </div>
+        <span className="text-[10px] px-2 py-1 rounded-full bg-blue-400/10 text-blue-400 border border-blue-400/20">
+          Sends to customer's email
+        </span>
+      </div>
+
+      {emailMessages.length > 0 && (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {emailMessages.map((m, i) => (
+            <div key={i} className="rounded-xl p-3 text-xs" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-blue-400">{m.sender_name} · {m.sender_role}</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {new Date(m.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <p style={{ color: 'var(--text-primary)' }} className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Compose reply</label>
+          <button onClick={generateDraft} disabled={generating}
+            className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors">
+            {generating ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+            AI Draft
+          </button>
+        </div>
+        <textarea rows={5} value={reply} onChange={e => setReply(e.target.value)}
+          placeholder="Write your reply to the customer..." className="input-field resize-none text-sm" />
+      </div>
+
+      <button onClick={sendReply} disabled={sending || !reply.trim()}
+        className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
+        {sending
+          ? <><Loader2 size={14} className="animate-spin" /> Sending...</>
+          : sent
+          ? <><CheckCircle2 size={14} /> Sent!</>
+          : <><Send size={14} /> Send Email Reply</>
+        }
+      </button>
+    </div>
+  )
+}
 
 export default function ComplaintDetail() {
   const { id } = useParams()
@@ -44,16 +312,20 @@ export default function ComplaintDetail() {
     finally { setSuggesting(false) }
   }
 
-  const updateStatus = async (status) => {
+  const updateStatus = async (status, note = '') => {
     setUpdatingStatus(true)
     try {
-      const { data } = await api.patch(`/complaints/${id}`, { status })
+      const { data } = await api.patch(`/complaints/${id}`, { status, note })
       setComplaint(data)
-      toast.success('Status updated')
+      toast.success(
+        status === 'in-progress' ? '✓ Review started — customer notified' :
+        status === 'resolved'    ? '✓ Complaint resolved — customer notified' :
+        'Status updated'
+      )
       if (status === 'resolved') {
         addNotification({
           type: 'resolved',
-          message: 'Your complaint has been resolved',
+          message: 'Complaint marked as resolved',
           detail: data.title,
           forRoles: ['user', 'admin'],
         })
@@ -106,7 +378,7 @@ export default function ComplaintDetail() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <button onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-100 mb-6 transition-colors">
+        className="flex items-center gap-1.5 text-sm text-slate-500 hover: mb-6 transition-colors">
         <ArrowLeft size={15} /> Back
       </button>
 
@@ -144,9 +416,9 @@ export default function ComplaintDetail() {
           {/* Left column */}
           <div className="lg:col-span-2 space-y-4">
             {/* Description */}
-            <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+            <div className="card p-5">
               <div className="text-xs text-slate-500 mb-3">Description</div>
-              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{description}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{description}</p>
             </div>
 
             {/* AI Summary */}
@@ -161,7 +433,7 @@ export default function ComplaintDetail() {
 
             {/* Escalation history */}
             {escalation_history.length > 0 && (
-              <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+              <div className="card p-5">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
                   <GitBranch size={12} /> Escalation History
                 </div>
@@ -182,7 +454,7 @@ export default function ComplaintDetail() {
 
             {/* Agent Assist */}
             {canEdit && (
-              <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+              <div className="card p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-sm font-medium">Agent Assist</div>
                   <button onClick={getSuggestion} disabled={suggesting}
@@ -193,7 +465,7 @@ export default function ComplaintDetail() {
                 </div>
                 {suggestion ? (
                   <div className="relative">
-                    <p className="text-sm text-slate-300 leading-relaxed bg-slate-800/50 rounded-xl p-4 pr-10">{suggestion}</p>
+                    <p className="text-sm leading-relaxed bg-slate-800/30 rounded-xl p-4 pr-10" style={{ color: 'var(--text-primary)' }}>{suggestion}</p>
                     <button
                       onClick={() => { navigator.clipboard.writeText(suggestion); toast.success('Copied') }}
                       className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 transition-colors"
@@ -207,35 +479,40 @@ export default function ComplaintDetail() {
               </div>
             )}
 
-            {/* Chat */}
-            <ChatBox complaintId={id} assignedAgent={assigned_agent} />
+            {/* Chat / Email Reply — channel-aware */}
+            {channel === 'email'
+              ? canEdit
+                ? <EmailReplyBox complaintId={id} complaint={complaint} />
+                : (
+                  <div className="card p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Mail size={14} className="text-blue-400" />
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Email Thread</span>
+                    </div>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      An agent will reply to your registered email address. Check your inbox for updates.
+                    </p>
+                  </div>
+                )
+              : <ChatBox complaintId={id} assignedAgent={assigned_agent} channel={channel} />
+            }
           </div>
 
           {/* Right column */}
           <div className="space-y-4">
-            {/* Status control */}
+            {/* Status workflow */}
             {canEdit && (
-              <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
-                <div className="text-xs text-slate-500 mb-3">Update Status</div>
-                <div className="space-y-1.5">
-                  {STATUS_OPTIONS.map(s => (
-                    <button key={s} disabled={updatingStatus} onClick={() => updateStatus(s)}
-                      className={`w-full px-3 py-2 rounded-xl text-xs capitalize text-left transition-colors ${
-                        status === s
-                          ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30'
-                          : 'text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 border border-transparent'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <StatusWorkflowPanel
+                status={status}
+                onUpdate={updateStatus}
+                updating={updatingStatus}
+                complaint={complaint}
+              />
             )}
 
             {/* Escalate */}
             {canEdit && status !== 'resolved' && (
-              <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+              <div className="card p-5">
                 <div className="text-xs text-slate-500 mb-3">Escalation</div>
                 <p className="text-xs text-slate-600 mb-3 leading-relaxed">
                   Escalate to another channel agent. They'll receive the full complaint history.
@@ -249,7 +526,7 @@ export default function ComplaintDetail() {
             )}
 
             {/* SLA info */}
-            <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+            <div className="card p-5">
               <div className="text-xs text-slate-500 mb-3 flex items-center gap-1.5"><Clock size={12} /> SLA</div>
               <SLABadge deadline={sla_deadline} status={status} />
               {sla_deadline && (

@@ -53,10 +53,10 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
             {user?.role === 'admin' ? 'Admin Dashboard' : user?.role === 'agent' ? 'Agent Dashboard' : 'My Dashboard'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
@@ -75,10 +75,11 @@ export default function Dashboard() {
             key={s.label}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07 }}
-            className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5"
+            className="border rounded-2xl p-5"
+            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-slate-500">{s.label}</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
               <div className={`w-8 h-8 rounded-xl ${s.bg} flex items-center justify-center`}>
                 <s.icon size={15} className={s.color} />
               </div>
@@ -98,23 +99,27 @@ export default function Dashboard() {
           onKeyDown={e => e.key === 'Enter' && fetchComplaints()}
           className="input-field w-52"
         />
-        <div className="flex gap-1 bg-slate-900/60 border border-slate-800/60 rounded-xl p-1">
+        <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
           {STATUSES.map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-xs capitalize transition-colors ${
-                statusFilter === s ? 'bg-violet-600 text-white' : 'text-slate-500 hover:text-slate-300'
-              }`}>{s}</button>
+                statusFilter === s ? 'bg-violet-600 text-white' : ''
+              }`}
+              style={statusFilter !== s ? { color: 'var(--text-muted)' } : {}}
+            >{s}</button>
           ))}
         </div>
-        <div className="flex gap-1 bg-slate-900/60 border border-slate-800/60 rounded-xl p-1">
+        <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
           {PRIORITIES.map(p => (
             <button key={p} onClick={() => setPriorityFilter(p)}
               className={`px-3 py-1.5 rounded-lg text-xs capitalize transition-colors ${
-                priorityFilter === p ? 'bg-violet-600 text-white' : 'text-slate-500 hover:text-slate-300'
-              }`}>{p}</button>
+                priorityFilter === p ? 'bg-violet-600 text-white' : ''
+              }`}
+              style={priorityFilter !== p ? { color: 'var(--text-muted)' } : {}}
+            >{p}</button>
           ))}
         </div>
-        <button onClick={fetchComplaints} className="ml-auto text-slate-500 hover:text-slate-300 transition-colors">
+        <button onClick={fetchComplaints} className="ml-auto transition-colors" style={{ color: 'var(--text-muted)' }}>
           <RefreshCw size={15} />
         </button>
       </div>
@@ -125,7 +130,7 @@ export default function Dashboard() {
           <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-slate-600">
+        <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>
           <AlertCircle size={32} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">No complaints found</p>
         </div>

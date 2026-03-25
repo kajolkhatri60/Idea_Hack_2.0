@@ -36,12 +36,23 @@ class AgentUpdate(BaseModel):
 class ReassignBody(BaseModel):
     agent_id: str
 
-# ── List all agents ─────────────────────────────────────────────────────────
+# ── List all agents (admin only) ────────────────────────────────────────────
 @router.get("/agents")
 async def list_agents(admin=Depends(require_admin)):
     db = get_db()
     cursor = db.users.find({"role": "agent"})
     return [serialize_agent(u) async for u in cursor]
+
+# ── Public: available agents by channel (any logged-in user) ────────────────
+@router.get("/agents/available")
+async def available_agents(channel: str = None, user=Depends(get_current_user)):
+    db = get_db()
+    query = {"role": "agent", "active": {"$ne": False}}
+    if channel:
+        query["agent_channel"] = channel
+    cursor = db.users.find(query)
+    return [{"id": str(u["_id"]), "name": u.get("name", ""), "agent_channel": u.get("agent_channel", "")}
+            async for u in cursor]
 
 # ── Update agent (channel, active status, name) ─────────────────────────────
 @router.patch("/agents/{agent_id}")

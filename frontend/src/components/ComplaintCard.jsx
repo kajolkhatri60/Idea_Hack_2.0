@@ -42,36 +42,37 @@ export default function ComplaintCard({ complaint }) {
   return (
     <div
       onClick={() => navigate(`/app/complaints/${_id}`)}
-      className="card-hover bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5 cursor-pointer group"
+      className="card-hover border rounded-2xl p-5 cursor-pointer group"
+      style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
-        <h3 className="font-medium text-sm text-slate-100 line-clamp-2 leading-snug group-hover:text-violet-300 transition-colors">{title}</h3>
+        <h3 className="font-medium text-sm line-clamp-2 leading-snug group-hover:text-violet-400 transition-colors" style={{ color: 'var(--text-primary)' }}>{title}</h3>
         {is_duplicate && (
           <span className="badge border border-orange-400/20 text-orange-400 bg-orange-400/10 shrink-0">Dup</span>
         )}
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-4">
-        <span className="badge border border-slate-700/50 text-slate-400 bg-slate-800/50">{category}</span>
+        <span className="badge border text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-elevated)' }}>{category}</span>
         <span className={`badge border ${p.cls}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />{priority}
         </span>
         <span className={`text-xs ${sentimentMap[sentiment] || 'text-slate-400'}`}>{sentiment}</span>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-slate-600">
+      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
         <div className="flex items-center gap-3">
           <span className={`flex items-center gap-1 ${s.cls}`}>
             <StatusIcon size={12} className={s.spin ? 'animate-spin' : ''} />
             <span className="capitalize">{status}</span>
           </span>
-          <span className="flex items-center gap-1 text-slate-600">
+          <span className="flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
             <ChannelIcon size={11} />
             <span className="capitalize">{channel}</span>
           </span>
         </div>
         {deadline && (
-          <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-400' : 'text-slate-600'}`}>
+          <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-400' : ''}`} style={!isOverdue ? { color: 'var(--text-muted)' } : {}}>
             <Clock size={11} />
             {isOverdue ? 'Overdue' : deadline.toLocaleDateString()}
           </span>

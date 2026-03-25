@@ -46,7 +46,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080b14] grid-bg flex items-center justify-center p-4">
+    <div className="min-h-screen grid-bg flex items-center justify-center p-4" style={{ background: 'var(--bg-base)' }}>
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 bg-violet-600/8 rounded-full blur-3xl pointer-events-none" />
 
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -56,22 +56,21 @@ export default function Register() {
           <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
             <ShieldAlert size={18} className="text-violet-400" />
           </div>
-          <span className="font-semibold text-slate-100">SmartResolve <span className="text-violet-400">AI</span></span>
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>SmartResolve <span className="text-violet-400">AI</span></span>
         </Link>
 
-        <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-sm">
-          <h1 className="text-xl font-semibold mb-1">Create account</h1>
-          <p className="text-sm text-slate-500 mb-6">Select your role to get the right experience</p>
+        <div className="border rounded-2xl p-8 backdrop-blur-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+          <h1 className="text-xl font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Create account</h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Select your role to get the right experience</p>
 
           {/* Role selector */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {ROLES.map(r => (
               <button key={r.value} type="button" onClick={() => set('role', r.value)}
                 className={`p-3 rounded-xl border text-left transition-all ${
-                  form.role === r.value
-                    ? 'border-violet-500/60 bg-violet-500/10 text-violet-300'
-                    : 'border-slate-700/60 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+                  form.role === r.value ? 'border-violet-500/60 bg-violet-500/10 text-violet-300' : ''
                 }`}
+                style={form.role !== r.value ? { borderColor: 'var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-muted)' } : {}}
               >
                 <div className="text-xs font-semibold mb-0.5">{r.label}</div>
                 <div className="text-[10px] opacity-70 leading-tight">{r.desc}</div>
@@ -79,7 +78,7 @@ export default function Register() {
             ))}
           </div>
 
-          {/* Agent channel picker — only shown when agent is selected */}
+          {/* Agent channel picker */}
           <AnimatePresence>
             {form.role === 'agent' && (
               <motion.div
@@ -88,15 +87,14 @@ export default function Register() {
                 className="overflow-hidden mb-4"
               >
                 <div className="pt-1 pb-3">
-                  <p className="text-xs text-slate-500 mb-2">Select your channel specialisation</p>
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Select your channel specialisation</p>
                   <div className="grid grid-cols-5 gap-1.5">
                     {AGENT_CHANNELS.map(({ value, label, icon: Icon, color }) => (
                       <button key={value} type="button" onClick={() => set('agent_channel', value)}
                         className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-center transition-all ${
-                          form.agent_channel === value
-                            ? color
-                            : 'border-slate-700/50 bg-slate-800/30 text-slate-500 hover:border-slate-600'
+                          form.agent_channel === value ? color : ''
                         }`}
+                        style={form.agent_channel !== value ? { borderColor: 'var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-muted)' } : {}}
                       >
                         <Icon size={15} />
                         <span className="text-[9px] leading-tight">{label}</span>
@@ -110,23 +108,24 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-500 block mb-1.5">Full name</label>
+              <label className="text-xs block mb-1.5" style={{ color: 'var(--text-muted)' }}>Full name</label>
               <input required value={form.name} onChange={e => set('name', e.target.value)}
                 className="input-field" placeholder="Your name" />
             </div>
             <div>
-              <label className="text-xs text-slate-500 block mb-1.5">Email</label>
+              <label className="text-xs block mb-1.5" style={{ color: 'var(--text-muted)' }}>Email</label>
               <input type="email" required value={form.email} onChange={e => set('email', e.target.value)}
                 className="input-field" placeholder="you@example.com" />
             </div>
             <div>
-              <label className="text-xs text-slate-500 block mb-1.5">Password</label>
+              <label className="text-xs block mb-1.5" style={{ color: 'var(--text-muted)' }}>Password</label>
               <div className="relative">
                 <input type={showPw ? 'text' : 'password'} required value={form.password}
                   onChange={e => set('password', e.target.value)}
                   className="input-field pr-10" placeholder="Min 6 characters" />
                 <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--text-muted)' }}>
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -139,7 +138,7 @@ export default function Register() {
             </button>
           </form>
 
-          <p className="text-sm text-slate-500 text-center mt-5">
+          <p className="text-sm text-center mt-5" style={{ color: 'var(--text-muted)' }}>
             Already have an account?{' '}
             <Link to="/login" className="text-violet-400 hover:text-violet-300 transition-colors">Sign in</Link>
           </p>

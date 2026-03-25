@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { ThemeProvider } from './context/ThemeContext'
 import { Toaster } from 'react-hot-toast'
 
 // Public pages
@@ -26,7 +27,7 @@ import InternalChat from './pages/InternalChat'
 function RoleRoute({ children, roles }) {
   const { user, loading } = useAuth()
   if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-[#080b14]">
+    <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg-base)' }}>
       <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
@@ -37,12 +38,13 @@ function RoleRoute({ children, roles }) {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <NotificationProvider>
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { background: '#0f172a', color: '#e2e8f0', border: '1px solid #1e293b', fontSize: '0.875rem' },
+            style: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: '0.875rem' },
             success: { iconTheme: { primary: '#7c3aed', secondary: '#fff' } },
           }}
         />
@@ -76,5 +78,6 @@ export default function App() {
         </Routes>
       </NotificationProvider>
     </AuthProvider>
+    </ThemeProvider>
   )
 }

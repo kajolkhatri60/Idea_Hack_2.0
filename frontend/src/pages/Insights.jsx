@@ -6,14 +6,18 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line
 } from 'recharts'
-import { TrendingUp, Clock, AlertTriangle, CheckCircle2, BarChart2 } from 'lucide-react'
+import {
+  TrendingUp, Clock, AlertTriangle, CheckCircle2, BarChart2,
+  Download, FileText, Loader2, Sparkles, RefreshCw, Shield
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#0891b2']
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#0d1117] border border-slate-700/60 rounded-xl px-3 py-2 text-xs shadow-xl">
+    <div className="border rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="text-slate-400 mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color }} className="font-medium">{p.value}</p>
@@ -26,6 +30,9 @@ export default function Insights() {
   const { user } = useAuth()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [rootCause, setRootCause] = useState(null)
+  const [loadingRC, setLoadingRC] = useState(false)
+  const [exportingCSV, setExportingCSV] = useState(false)
 
   useEffect(() => {
     api.get('/complaints/insights')
@@ -33,6 +40,31 @@ export default function Insights() {
       .catch(() => toast.error('Failed to load insights'))
       .finally(() => setLoading(false))
   }, [])
+
+  const generateRootCause = async () => {
+    setLoadingRC(true)
+    setRootCause(null)
+    try {
+      const { data } = await api.get('/complaints/report/root-cause')
+      setRootCause(data)
+    } catch { toast.error('Failed to generate report') }
+    finally { setLoadingRC(false) }
+  }
+
+  const exportCSV = async () => {
+    setExportingCSV(true)
+    try {
+      const resp = await api.get('/complaints/export/csv', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([resp.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `complaints_report_${new Date().toISOString().slice(0,10)}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('Report downloaded')
+    } catch { toast.error('Export failed') }
+    finally { setExportingCSV(false) }
+  }
 
   if (loading) return (
     <div className="flex items-center justify-center py-32">
@@ -57,22 +89,38 @@ export default function Insights() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-9 h-9 rounded-xl bg-violet-400/10 flex items-center justify-center">
-          <TrendingUp size={18} className="text-violet-400" />
+      <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-400/10 flex items-center justify-center">
+            <TrendingUp size={18} className="text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">Insights</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {user?.role === 'admin' ? 'All complaints' : 'Your assigned complaints'}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold">Insights</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {user?.role === 'admin' ? 'All complaints' : 'Your assigned complaints'}
-          </p>
-        </div>
+        {user?.role === 'admin' && (
+          <div className="flex items-center gap-2">
+            <button onClick={exportCSV} disabled={exportingCSV}
+              className="btn-ghost flex items-center gap-2 text-xs">
+              {exportingCSV ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+              Export CSV
+            </button>
+            <button onClick={generateRootCause} disabled={loadingRC}
+              className="btn-primary flex items-center gap-2 text-xs">
+              {loadingRC ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              AI Root Cause Report
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {kpis.map((k, i) => (
-          <div key={i} className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+          <div key={i} className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-slate-500">{k.label}</span>
               <div className={`w-8 h-8 rounded-xl ${k.bg} flex items-center justify-center`}>
@@ -86,7 +134,7 @@ export default function Insights() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         {/* Category bar */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+        <div className="card p-5">
           <p className="text-sm font-medium mb-5">By Category</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={categoryData} barSize={20}>
@@ -99,7 +147,7 @@ export default function Insights() {
         </div>
 
         {/* Sentiment pie */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+        <div className="card p-5">
           <p className="text-sm font-medium mb-5">Sentiment Distribution</p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -115,7 +163,7 @@ export default function Insights() {
 
       {/* Daily trend */}
       {trendData.length > 0 && (
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5 mb-5">
+        <div className="card p-5 mb-5">
           <p className="text-sm font-medium mb-5">Daily Trend (last 14 days)</p>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={trendData}>
@@ -130,7 +178,7 @@ export default function Insights() {
 
       {/* Priority breakdown + top issues */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+        <div className="card p-5">
           <p className="text-sm font-medium mb-5">By Priority</p>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={priorityData} barSize={20} layout="vertical">
@@ -148,19 +196,102 @@ export default function Insights() {
         </div>
 
         {data.top_issues?.length > 0 && (
-          <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+          <div className="card p-5">
             <p className="text-sm font-medium mb-4">Frequent Issues</p>
             <div className="space-y-3">
               {data.top_issues.map((issue, i) => (
                 <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-300 truncate mr-3">{issue.title}</span>
-                  <span className="text-xs text-slate-500 shrink-0 bg-slate-800 px-2 py-0.5 rounded-lg">{issue.count}×</span>
+                  <span className="text-sm truncate mr-3" style={{ color: 'var(--text-primary)' }}>{issue.title}</span>
+                  <span className="text-xs shrink-0 px-2 py-0.5 rounded-lg" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>{issue.count}×</span>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* Regulatory Reporting Section — admin only */}
+      {user?.role === 'admin' && (
+        <div className="mt-5">
+          <AnimatePresence>
+            {(loadingRC || rootCause) && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-violet-400/10 flex items-center justify-center">
+                      <Shield size={15} className="text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>AI Root Cause Analysis Report</p>
+                      {rootCause?.generated_at && (
+                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                          Generated {new Date(rootCause.generated_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={generateRootCause} disabled={loadingRC}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors hover:bg-violet-500/10 text-violet-400">
+                      <RefreshCw size={11} className={loadingRC ? 'animate-spin' : ''} /> Regenerate
+                    </button>
+                    {rootCause?.report && (
+                      <button onClick={() => {
+                        const blob = new Blob([rootCause.report], { type: 'text/plain' })
+                        const a = document.createElement('a')
+                        a.href = URL.createObjectURL(blob)
+                        a.download = `root_cause_report_${new Date().toISOString().slice(0,10)}.txt`
+                        a.click()
+                      }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors hover:bg-emerald-500/10 text-emerald-400">
+                        <Download size={11} /> Download
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {loadingRC ? (
+                  <div className="space-y-3">
+                    {[90, 75, 85, 60, 70].map((w, i) => (
+                      <div key={i} className="h-3 rounded-full animate-pulse" style={{ background: 'var(--bg-elevated)', width: `${w}%` }} />
+                    ))}
+                    <p className="text-xs text-violet-400 flex items-center gap-1.5 mt-2">
+                      <Sparkles size={11} /> AI is analyzing complaint patterns...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl p-4 text-sm leading-relaxed whitespace-pre-wrap"
+                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontFamily: 'inherit', lineHeight: '1.7' }}>
+                    {rootCause?.report}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Regulatory export card */}
+          <div className="card p-5 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-400/10 flex items-center justify-center">
+                  <FileText size={15} className="text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Regulatory Report Export</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Full complaint data with SLA status, severity scores, escalation counts — CSV format
+                  </p>
+                </div>
+              </div>
+              <button onClick={exportCSV} disabled={exportingCSV}
+                className="btn-primary flex items-center gap-2 text-xs shrink-0">
+                {exportingCSV ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                Download CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

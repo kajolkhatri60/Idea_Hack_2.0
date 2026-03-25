@@ -110,14 +110,14 @@ export default function InternalChat() {
   const activeThreadData = threads.find(t => t.agent_id === agentThreadId)
 
   return (
-    <div className="flex h-full bg-[#080b14]">
+    <div className="flex h-full" style={{ background: 'var(--bg-base)' }}>
 
       {/* Sidebar — admin sees thread list, agent sees nothing (auto-opens) */}
       {isAdmin && (
-        <div className="w-64 shrink-0 border-r border-slate-800/60 flex flex-col bg-[#0d1117]">
-          <div className="px-4 py-4 border-b border-slate-800/60">
-            <h2 className="text-sm font-semibold">Agent Messages</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Direct threads with your agents</p>
+        <div className="w-64 shrink-0 border-r flex flex-col" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+          <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Agent Messages</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Direct threads with your agents</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -136,7 +136,7 @@ export default function InternalChat() {
                 <button
                   key={t.agent_id}
                   onClick={() => openThread(t.agent_id)}
-                  className={`w-full flex items-start gap-3 px-4 py-3.5 border-b border-slate-800/30 text-left transition-colors hover:bg-slate-800/30 ${
+                  className={`w-full flex items-start gap-3 px-4 py-3.5 border-b border-theme/30 text-left transition-colors hover:bg-slate-800/30 ${
                     activeThread === t.agent_id ? 'bg-slate-800/40 border-l-2 border-l-violet-500' : ''
                   }`}
                 >
@@ -171,10 +171,11 @@ export default function InternalChat() {
         ) : (
           <>
             {/* Thread header */}
-            <div className="h-14 shrink-0 flex items-center gap-3 px-5 border-b border-slate-800/60 bg-[#0d1117]">
+            <div className="h-14 shrink-0 flex items-center gap-3 px-5" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
               {isAdmin && (
                 <button onClick={() => setActiveThread(null)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors mr-1">
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors mr-1 hover:bg-slate-800/30"
+                  style={{ color: 'var(--text-muted)' }}>
                   <ChevronLeft size={15} />
                 </button>
               )}
@@ -184,16 +185,16 @@ export default function InternalChat() {
                   : 'A'}
               </div>
               <div>
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                   {isAdmin ? (activeThreadData?.agent_name || 'Agent') : 'Admin'}
                 </p>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {isAdmin ? 'Agent' : 'Support Admin'}
                 </p>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
                 <Circle size={7} className="text-emerald-400 fill-emerald-400" />
-                <span className="text-[10px] text-slate-500">Online</span>
+                <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Online</span>
               </div>
             </div>
 
@@ -239,8 +240,10 @@ export default function InternalChat() {
                         <div className={`max-w-[68%] rounded-2xl px-4 py-2.5 ${
                           mine
                             ? 'bg-violet-600 text-white rounded-br-sm'
-                            : 'bg-[#0d1117] border border-slate-800/60 text-slate-200 rounded-bl-sm'
-                        }`}>
+                            : 'rounded-bl-sm'
+                        }`}
+                        style={!mine ? { background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' } : {}}
+                        >
                           {!mine && (
                             <p className="text-[10px] font-medium mb-1 capitalize text-slate-400">{msg.sender_name}</p>
                           )}
@@ -258,7 +261,7 @@ export default function InternalChat() {
             </div>
 
             {/* Input */}
-            <form onSubmit={send} className="flex items-center gap-3 px-5 py-4 border-t border-slate-800/60 bg-[#0d1117] shrink-0">
+            <form onSubmit={send} className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
               <input
                 value={text}
                 onChange={e => setText(e.target.value)}

@@ -58,7 +58,7 @@ export default function Login() {
   const selected = ROLES.find(r => r.value === form.role)
 
   return (
-    <div className="min-h-screen bg-[#080b14] grid-bg flex items-center justify-center p-4">
+    <div className="min-h-screen grid-bg flex items-center justify-center p-4" style={{ background: 'var(--bg-base)' }}>
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 bg-violet-600/8 rounded-full blur-3xl pointer-events-none" />
 
       <motion.div
@@ -69,12 +69,12 @@ export default function Login() {
           <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
             <ShieldAlert size={18} className="text-violet-400" />
           </div>
-          <span className="font-semibold text-slate-100">SmartResolve <span className="text-violet-400">AI</span></span>
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>SmartResolve <span className="text-violet-400">AI</span></span>
         </Link>
 
-        <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-sm">
-          <h1 className="text-xl font-semibold mb-1">Sign in</h1>
-          <p className="text-sm text-slate-500 mb-6">Select your role, then enter your credentials</p>
+        <div className="border rounded-2xl p-8 backdrop-blur-sm" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+          <h1 className="text-xl font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Sign in</h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Select your role, then enter your credentials</p>
 
           {/* Role selector */}
           <div className="grid grid-cols-3 gap-2 mb-6">
@@ -86,7 +86,8 @@ export default function Login() {
                   key={r.value}
                   type="button"
                   onClick={() => set('role', r.value)}
-                  className={`p-3 rounded-xl border text-left transition-all ${active ? r.color : r.inactive}`}
+                  className={`p-3 rounded-xl border text-left transition-all ${active ? r.color : ''}`}
+                  style={!active ? { borderColor: 'var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-muted)' } : {}}
                 >
                   <Icon size={15} className="mb-1.5 opacity-80" />
                   <div className="text-xs font-semibold">{r.label}</div>
@@ -107,7 +108,7 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-500 block mb-1.5">Email</label>
+              <label className="text-xs block mb-1.5" style={{ color: 'var(--text-muted)' }}>Email</label>
               <input
                 type="email" required
                 value={form.email}
@@ -117,7 +118,7 @@ export default function Login() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 block mb-1.5">Password</label>
+              <label className="text-xs block mb-1.5" style={{ color: 'var(--text-muted)' }}>Password</label>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'} required
@@ -129,7 +130,8 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -147,7 +149,7 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-sm text-slate-500 text-center mt-5">
+          <p className="text-sm text-center mt-5" style={{ color: 'var(--text-muted)' }}>
             No account?{' '}
             <Link to="/register" className="text-violet-400 hover:text-violet-300 transition-colors">
               Create one

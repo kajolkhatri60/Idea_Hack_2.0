@@ -51,7 +51,7 @@ const fade = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-[#080b14] text-slate-100">
+    <div className="min-h-screen page-bg">
       <Navbar />
 
       {/* Hero */}
@@ -100,7 +100,7 @@ export default function Landing() {
             <Link to="/register" className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-7 py-3.5 rounded-xl font-medium text-sm transition-all hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5">
               Start for free <ArrowRight size={16} />
             </Link>
-            <Link to="/contact" className="flex items-center gap-2 text-slate-300 hover:text-slate-100 border border-slate-700 hover:border-slate-600 px-7 py-3.5 rounded-xl font-medium text-sm transition-all hover:bg-slate-800/40">
+            <Link to="/contact" className="flex items-center gap-2 text-slate-300 hover: border border-slate-700 hover:border-slate-600 px-7 py-3.5 rounded-xl font-medium text-sm transition-all hover:bg-slate-800/40">
               Talk to us
             </Link>
           </motion.div>
@@ -142,12 +142,12 @@ export default function Landing() {
                 key={f.title}
                 variants={fade} initial="hidden" whileInView="show"
                 viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                className="card-hover bg-slate-900/50 border border-slate-800/60 rounded-2xl p-6"
+                className="card-hover bg-slate-900/50 border border-theme rounded-2xl p-6"
               >
                 <div className={`w-10 h-10 rounded-xl ${f.bg} flex items-center justify-center mb-4`}>
                   <f.icon size={20} className={f.color} />
                 </div>
-                <h3 className="font-semibold text-slate-100 mb-2">{f.title}</h3>
+                <h3 className="font-semibold  mb-2">{f.title}</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
@@ -156,7 +156,7 @@ export default function Landing() {
       </section>
 
       {/* Roles */}
-      <section className="py-24 px-6 bg-slate-900/20 border-y border-slate-800/40">
+      <section className="py-24 px-6 bg-slate-900/20 border-y border-theme">
         <div className="max-w-5xl mx-auto">
           <motion.div
             variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }}
@@ -216,11 +216,11 @@ export default function Landing() {
                 key={s.step}
                 variants={fade} initial="hidden" whileInView="show"
                 viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                className="flex items-start gap-5 bg-slate-900/40 border border-slate-800/50 rounded-2xl p-5"
+                className="flex items-start gap-5 bg-slate-900/40 border border-theme/50 rounded-2xl p-5"
               >
                 <span className="text-2xl font-bold text-slate-700 shrink-0 w-10">{s.step}</span>
                 <div>
-                  <div className="font-medium text-slate-100 mb-1">{s.title}</div>
+                  <div className="font-medium  mb-1">{s.title}</div>
                   <div className="text-sm text-slate-500">{s.desc}</div>
                 </div>
               </motion.div>

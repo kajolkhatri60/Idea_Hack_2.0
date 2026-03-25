@@ -3,7 +3,7 @@ import { ShieldAlert, GitFork, Globe, Rss } from 'lucide-react'
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-800/60 bg-[#080b14]">
+    <footer className="border-t" style={{ borderColor: 'var(--border)', background: 'var(--bg-base)' }}>
       <div className="max-w-7xl mx-auto px-6 py-14">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
@@ -48,7 +48,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-slate-800/60 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="border-t border-theme pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-600">© 2025 SmartResolve AI. All rights reserved.</p>
           <p className="text-xs text-slate-600">Built for IdeaHack 2.0</p>
         </div>

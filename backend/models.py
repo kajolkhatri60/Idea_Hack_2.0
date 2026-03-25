@@ -20,10 +20,12 @@ class ComplaintCreate(BaseModel):
     description: str
     category: str = "Other"
     channel: str = "web"
+    product: Optional[str] = None
 
 class ComplaintUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
+    note: Optional[str] = None
 
 class AnalyzePreviewRequest(BaseModel):
     text: str

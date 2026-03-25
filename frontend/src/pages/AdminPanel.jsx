@@ -34,7 +34,7 @@ function AgentRow({ agent, onUpdate, onRemove }) {
   const ChIcon = ch?.icon || Globe
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-slate-800/40 last:border-0">
+    <div className="flex items-center justify-between py-3 border-b border-theme last:border-0">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-semibold text-slate-300">
           {agent.name[0]?.toUpperCase()}
@@ -156,7 +156,7 @@ export default function AdminPanel() {
         {kpis.map((k, i) => (
           <motion.div key={k.label}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-            className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+            className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-slate-500">{k.label}</span>
               <div className={`w-8 h-8 rounded-xl ${k.bg} flex items-center justify-center`}>
@@ -170,7 +170,7 @@ export default function AdminPanel() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         {/* Agent management */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+        <div className="card p-5">
           <div className="text-sm font-medium mb-4">Agents ({agents.length})</div>
           {agents.length === 0 ? (
             <p className="text-xs text-slate-600 py-4 text-center">No agents registered yet.</p>
@@ -182,7 +182,7 @@ export default function AdminPanel() {
         </div>
 
         {/* Category breakdown */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+        <div className="card p-5">
           <div className="text-sm font-medium mb-4">By Category</div>
           {insights?.by_category && Object.entries(insights.by_category).length > 0 ? (
             <div className="space-y-2.5">
@@ -208,11 +208,11 @@ export default function AdminPanel() {
 
       {/* Top issues */}
       {insights?.top_issues?.length > 0 && (
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-5">
+        <div className="card p-5">
           <div className="text-sm font-medium mb-4">Frequent Issues</div>
           <div className="space-y-2">
             {insights.top_issues.map((issue, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-slate-800/40 last:border-0">
+              <div key={i} className="flex items-center justify-between py-2 border-b border-theme last:border-0">
                 <span className="text-sm text-slate-300">{issue.title}</span>
                 <span className="badge border border-slate-700/50 text-slate-500 bg-slate-800/50">{issue.count}×</span>
               </div>

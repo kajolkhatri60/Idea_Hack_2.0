@@ -68,7 +68,7 @@ export default function Profile() {
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
         {/* Avatar + role card */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-6 flex items-center gap-5">
+        <div className="card p-6 flex items-center gap-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600/30 to-blue-600/20 border border-violet-500/20 flex items-center justify-center shrink-0">
             <span className="text-2xl font-bold text-violet-300">
               {(user?.name || 'U')[0].toUpperCase()}
@@ -91,7 +91,7 @@ export default function Profile() {
         </div>
 
         {/* Edit form */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-6">
+        <div className="card p-6">
           <h2 className="text-sm font-medium mb-5">Personal Information</h2>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -145,7 +145,7 @@ export default function Profile() {
         </div>
 
         {/* Contact channels summary */}
-        <div className="bg-[#0d1117] border border-slate-800/60 rounded-2xl p-6">
+        <div className="card p-6">
           <h2 className="text-sm font-medium mb-4">Contact Channels</h2>
           <div className="space-y-3">
             {[
@@ -153,7 +153,7 @@ export default function Profile() {
               { icon: Phone, label: 'Phone', value: form.phone || '—' },
               { icon: MessageSquare, label: 'WhatsApp', value: form.whatsapp || '—' },
             ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center gap-3 py-2 border-b border-slate-800/40 last:border-0">
+              <div key={label} className="flex items-center gap-3 py-2 border-b border-theme last:border-0">
                 <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
                   <Icon size={13} className="text-slate-400" />
                 </div>

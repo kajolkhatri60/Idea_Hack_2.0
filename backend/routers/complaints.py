@@ -1,13 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from database import get_db
 from models import ComplaintCreate, ComplaintUpdate, AnalyzePreviewRequest
 from auth_utils import get_current_user
 from ai_service import analyze_complaint, suggest_reply
-from duplicate_detector import embed, find_duplicates
-from email_service import send_escalation_email
+from duplicate_detector import embed, find_duplicates, check_duplicate_for_user
+from email_service import (
+    send_escalation_email, send_complaint_confirmation,
+    send_status_update, send_agent_reply, send_sla_warning
+)
 from bson import ObjectId
 from datetime import datetime, timedelta
 from collections import Counter
+import csv, io
 
 router = APIRouter()
 SLA_HOURS = {"high": 4, "medium": 24, "low": 72}
@@ -39,11 +44,27 @@ async def analyze_preview(body: AnalyzePreviewRequest, user=Depends(get_current_
     dups = await find_duplicates(db, body.text)
     result["is_duplicate"] = len(dups) > 0
     return result
-
 # ── Submit complaint (user picks a channel → auto-assigns matching agent) ───
 @router.post("")
 async def create_complaint(body: ComplaintCreate, user=Depends(get_current_user)):
     db = get_db()
+    uid = str(user["_id"])
+
+    # ── Duplicate check BEFORE creating ────────────────────────────────────
+    ai_title = body.title or body.description[:60]
+    dup_check = await check_duplicate_for_user(db, uid, ai_title, body.description)
+    if dup_check["is_duplicate"]:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "type": "duplicate",
+                "message": "A similar complaint is already being processed.",
+                "existing_id": dup_check["existing_id"],
+                "existing_title": dup_check["existing_title"],
+                "existing_status": dup_check.get("existing_status", "open"),
+            }
+        )
+
     ai = analyze_complaint(body.description)
     embedding = embed(f"{body.title} {body.description}")
     dups = await find_duplicates(db, f"{body.title} {body.description}")
@@ -57,13 +78,18 @@ async def create_complaint(body: ComplaintCreate, user=Depends(get_current_user)
     assigned_agent = agent.get("name", "") if agent else ""
 
     doc = {
-        "title": body.title,
+        "title": body.title or ai.get("title", body.description[:60]),
         "description": body.description,
         "category": ai.get("category", body.category),
+        "product": ai.get("product", body.product or "General"),
         "channel": body.channel,
         "sentiment": ai.get("sentiment", "neutral"),
         "priority": priority,
+        "severity_score": ai.get("severity_score", 5),
         "summary": ai.get("summary", ""),
+        "key_issues": ai.get("key_issues", []),
+        "urgency_signals": ai.get("urgency_signals", []),
+        "suggested_actions": ai.get("suggested_actions", []),
         "status": "open",
         "sla_deadline": sla_deadline,
         "is_duplicate": len(dups) > 0,
@@ -80,6 +106,16 @@ async def create_complaint(body: ComplaintCreate, user=Depends(get_current_user)
     result = await db.complaints.insert_one(doc)
     doc["_id"] = str(result.inserted_id)
     doc.pop("embedding")
+
+    # Send confirmation email (all channels)
+    if user.get("email"):
+        import asyncio
+        asyncio.create_task(send_complaint_confirmation(
+            user["email"], user.get("name", "User"),
+            doc["_id"], doc["title"], doc["category"],
+            priority, sla_deadline, assigned_agent
+        ))
+
     return doc
 
 # ── My complaints (user's own) ──────────────────────────────────────────────
@@ -152,6 +188,108 @@ async def get_insights(user=Depends(get_current_user)):
         "top_issues": [{"title": t, "count": c} for t, c in title_counts.most_common(5) if c > 1],
     }
 
+# ── Regulatory CSV export (admin only) ──────────────────────────────────────
+@router.get("/export/csv")
+async def export_csv(user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    db = get_db()
+    docs = await db.complaints.find({}).sort("created_at", -1).to_list(length=5000)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Complaint ID", "Title", "Category", "Product", "Channel",
+        "Priority", "Severity Score", "Sentiment", "Status",
+        "Assigned Agent", "SLA Deadline", "SLA Breached",
+        "Is Duplicate", "Escalation Count",
+        "Created At", "Updated At", "Resolution Time (hrs)"
+    ])
+    now = datetime.utcnow()
+    for d in docs:
+        sla = d.get("sla_deadline")
+        created = d.get("created_at")
+        updated = d.get("updated_at")
+        sla_breached = "Yes" if sla and sla < now and d.get("status") != "resolved" else "No"
+        res_time = ""
+        if d.get("status") == "resolved" and created and updated:
+            res_time = round((updated - created).total_seconds() / 3600, 2)
+        writer.writerow([
+            str(d["_id"]),
+            d.get("title", ""),
+            d.get("category", ""),
+            d.get("product", ""),
+            d.get("channel", ""),
+            d.get("priority", ""),
+            d.get("severity_score", ""),
+            d.get("sentiment", ""),
+            d.get("status", ""),
+            d.get("assigned_agent", ""),
+            sla.strftime("%Y-%m-%d %H:%M") if sla else "",
+            sla_breached,
+            "Yes" if d.get("is_duplicate") else "No",
+            len(d.get("escalation_history", [])),
+            created.strftime("%Y-%m-%d %H:%M") if created else "",
+            updated.strftime("%Y-%m-%d %H:%M") if updated else "",
+            res_time,
+        ])
+
+    output.seek(0)
+    filename = f"complaints_report_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# ── AI Root Cause Report (admin only) ───────────────────────────────────────
+@router.get("/report/root-cause")
+async def root_cause_report(user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    db = get_db()
+    docs = await db.complaints.find({}).sort("created_at", -1).to_list(length=200)
+    if not docs:
+        return {"report": "No complaints data available yet."}
+
+    # Build a compact summary for the AI
+    category_counts = dict(Counter(d.get("category") for d in docs))
+    sentiment_counts = dict(Counter(d.get("sentiment") for d in docs))
+    top_titles = [t for t, c in Counter(d.get("title") for d in docs).most_common(10)]
+    sla_breaches = sum(1 for d in docs if d.get("sla_deadline") and
+                       d["sla_deadline"] < datetime.utcnow() and d.get("status") != "resolved")
+    high_priority = sum(1 for d in docs if d.get("priority") == "high")
+    all_issues = []
+    for d in docs:
+        all_issues.extend(d.get("key_issues", []))
+    top_issues = [issue for issue, _ in Counter(all_issues).most_common(10)]
+
+    try:
+        from ai_service import _chat
+        prompt = f"""You are a senior customer experience analyst. Based on this complaint data, write a concise root cause analysis report.
+
+Data summary:
+- Total complaints: {len(docs)}
+- By category: {category_counts}
+- By sentiment: {sentiment_counts}
+- High priority complaints: {high_priority}
+- SLA breaches: {sla_breaches}
+- Most frequent complaint titles: {top_titles[:5]}
+- Most common extracted issues: {top_issues[:8]}
+
+Write a structured report with:
+1. Executive Summary (2-3 sentences)
+2. Top 3 Root Causes identified
+3. Most affected product/service areas
+4. Recommended immediate actions (3 bullet points)
+5. Regulatory risk assessment (1-2 sentences)
+
+Keep it professional, concise, and actionable. Max 300 words."""
+        report = _chat(prompt)
+        return {"report": report, "generated_at": datetime.utcnow().isoformat()}
+    except Exception as e:
+        return {"report": f"Report generation failed: {e}", "generated_at": datetime.utcnow().isoformat()}
+
 # ── Get single complaint ────────────────────────────────────────────────────
 @router.get("/{complaint_id}")
 async def get_complaint(complaint_id: str, user=Depends(get_current_user)):
@@ -173,8 +311,81 @@ async def update_complaint(complaint_id: str, body: ComplaintUpdate, user=Depend
     update = {"updated_at": datetime.utcnow()}
     if body.status:   update["status"] = body.status
     if body.priority: update["priority"] = body.priority
+
+    # Store status change in audit trail
+    if body.status and body.status != doc.get("status"):
+        audit_entry = {
+            "from_status": doc.get("status"),
+            "to_status": body.status,
+            "changed_by": user.get("name", ""),
+            "changed_by_role": user.get("role", ""),
+            "note": body.note or "",
+            "at": datetime.utcnow().isoformat(),
+        }
+        await db.complaints.update_one(
+            {"_id": ObjectId(complaint_id)},
+            {"$push": {"status_history": audit_entry}}
+        )
+
     await db.complaints.update_one({"_id": ObjectId(complaint_id)}, {"$set": update})
+
+    # Send status update email to complaint owner
+    if body.status and body.status != doc.get("status"):
+        owner = await db.users.find_one({"_id": ObjectId(doc["user_id"])})
+        if owner and owner.get("email"):
+            import asyncio
+            asyncio.create_task(send_status_update(
+                owner["email"], owner.get("name", "User"),
+                complaint_id, doc.get("title", ""),
+                body.status, user.get("name", "")
+            ))
+
     return serialize(await db.complaints.find_one({"_id": ObjectId(complaint_id)}))
+
+# ── Agent email reply (email channel) ──────────────────────────────────────
+@router.post("/{complaint_id}/email-reply")
+async def send_email_reply(complaint_id: str, body: dict, user=Depends(get_current_user)):
+    if user.get("role") not in ("agent", "admin"):
+        raise HTTPException(status_code=403, detail="Agents and admins only")
+    db = get_db()
+    doc = await db.complaints.find_one({"_id": ObjectId(complaint_id)})
+    if not doc or not can_view(doc, user):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    reply_text = body.get("reply", "").strip()
+    if not reply_text:
+        raise HTTPException(status_code=400, detail="Reply text is required")
+
+    # Store reply in messages array as a regular message
+    from bson import ObjectId as ObjId
+    from datetime import timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    message = {
+        "id": str(ObjId()),
+        "sender_id": str(user["_id"]),
+        "sender_name": user.get("name", ""),
+        "sender_role": user.get("role", "agent"),
+        "text": reply_text,
+        "msg_type": "email",
+        "at": datetime.now(IST).isoformat(),
+        "read": False,
+    }
+    await db.complaints.update_one(
+        {"_id": ObjectId(complaint_id)},
+        {"$push": {"messages": message}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+
+    # Send actual email to complaint owner
+    owner = await db.users.find_one({"_id": ObjectId(doc["user_id"])})
+    if owner and owner.get("email"):
+        import asyncio
+        asyncio.create_task(send_agent_reply(
+            owner["email"], owner.get("name", "User"),
+            complaint_id, doc.get("title", ""),
+            user.get("name", "Agent"), reply_text
+        ))
+
+    return {"sent": True, "message": message}
 
 # ── Agent reply suggestion ──────────────────────────────────────────────────
 @router.post("/{complaint_id}/suggest-reply")
