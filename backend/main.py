@@ -15,6 +15,7 @@ app = FastAPI(title="SmartResolve AI", lifespan=lifespan)
 
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://idea-hack-2-0.vercel.app",
     os.getenv("FRONTEND_URL", ""),
 ]
 
