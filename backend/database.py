@@ -11,8 +11,14 @@ async def connect_db():
     global client, db
     mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
     db_name = os.getenv("DB_NAME", "smart-resolve")
-    # serverSelectionTimeoutMS prevents hanging forever if MongoDB is unreachable
-    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+
+    is_atlas = "mongodb+srv" in mongo_url or "mongodb.net" in mongo_url
+    kwargs = {"serverSelectionTimeoutMS": 5000}
+    if is_atlas:
+        kwargs["tls"] = True
+        kwargs["tlsAllowInvalidCertificates"] = True
+
+    client = AsyncIOMotorClient(mongo_url, **kwargs)
     db = client[db_name]
     try:
         await db.users.create_index("email", unique=True)
